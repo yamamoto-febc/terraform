@@ -1,0 +1,40 @@
+<% wrap_layout :inner do %>
+	<% content_for :sidebar do %>
+		<div class="docs-sidebar hidden-print affix-top" role="complementary">
+			<ul class="nav docs-sidenav">
+				<li<%= sidebar_current("docs-home") %>>
+				    <a href="/docs/providers/index.html">&laquo; Documentation Home</a>
+                </li>
+
+				<li<%= sidebar_current("docs-sacloud-index") %>>
+				    <a href="/docs/providers/sacloud/index.html">Sakura Cloud Provider</a>
+                </li>
+
+				<li<%= sidebar_current(/^docs-sacloud-resource/) %>>
+                    <a href="#">Resources</a>
+                    <ul class="nav nav-visible">
+                        <li<%= sidebar_current("docs-sacloud-resource-server") %>>
+                            <a href="/docs/providers/sacloud/r/server.html">sakuracloud_server</a>
+                        </li>
+                        <li<%= sidebar_current("docs-sacloud-resource-disk") %>>
+                            <a href="/docs/providers/sacloud/r/disk.html">sakuracloud_disk</a>
+                        </li>
+                        <li<%= sidebar_current("docs-sacloud-resource-ssh-key") %>>
+                            <a href="/docs/providers/sacloud/r/ssh_key.html">sakuracloud_ssh_key</a>
+                        </li>
+                        <li<%= sidebar_current("docs-sacloud-resource-dns") %>>
+                            <a href="/docs/providers/sacloud/r/dns.html">sakuracloud_dns</a>
+                        </li>
+                        <li<%= sidebar_current("docs-sacloud-resource-gslb") %>>
+                            <a href="/docs/providers/sacloud/r/gslb.html">sakuracloud_gslb</a>
+                        </li>
+                        <li<%= sidebar_current("docs-sacloud-resource-simple-monitor") %>>
+                            <a href="/docs/providers/sacloud/r/simple_monitor.html">sakuracloud_simple_monitor</a>
+                        </li>
+                    </ul>
+				</li>
+			</ul>
+		</div>
+	<% end %>
+	<%= yield %>
+<% end %>
