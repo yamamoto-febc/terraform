@@ -3,6 +3,7 @@ package sakuracloud
 import (
 	"fmt"
 
+	"github.com/fsouza/go-dockerclient/external/github.com/docker/go-units"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/yamamoto-febc/libsacloud/api"
 	"github.com/yamamoto-febc/libsacloud/sacloud"
@@ -70,7 +71,7 @@ func resourceSakuraCloudDisk() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				ForceNew: true,
-				Default:  20480,
+				Default:  20,
 			},
 			"server_id": &schema.Schema{
 				Type:     schema.TypeString,
@@ -93,6 +94,8 @@ func resourceSakuraCloudDisk() *schema.Resource {
 			"zone": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
 				Description:  "target SakuraCloud zone",
 				ValidateFunc: validateStringInWord([]string{"is1a", "is1b", "tk1a", "tk1v"}),
 			},
@@ -106,7 +109,7 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 	zone, ok := d.GetOk("zone")
 	if ok {
 		originalZone := client.Zone
-		client.Zone = zone
+		client.Zone = zone.(string)
 		defer func() { client.Zone = originalZone }()
 	}
 
@@ -151,7 +154,7 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	//size
-	opts.SizeMB = d.Get("size").(int)
+	opts.SizeMB = d.Get("size").(int) * units.GiB / units.MiB
 
 	//description
 	opts.Description = d.Get("description").(string)
@@ -191,7 +194,7 @@ func resourceSakuraCloudDiskRead(d *schema.ResourceData, meta interface{}) error
 	zone, ok := d.GetOk("zone")
 	if ok {
 		originalZone := client.Zone
-		client.Zone = zone
+		client.Zone = zone.(string)
 		defer func() { client.Zone = originalZone }()
 	}
 
@@ -209,13 +212,15 @@ func resourceSakuraCloudDiskRead(d *schema.ResourceData, meta interface{}) error
 	//if disk.SourceDisk != nil {
 	//	d.Set("source_disk_id", disk.SourceDisk.ID)
 	//}
-	d.Set("size", disk.SizeMB)
+	d.Set("size", disk.SizeMB*units.MiB/units.GiB)
 	d.Set("description", disk.Description)
 	d.Set("tags", disk.Tags)
 
 	if disk.Server != nil {
 		d.Set("server_id", disk.Server.ID)
 	}
+
+	d.Set("zone", client.Zone)
 
 	return nil
 }
@@ -225,7 +230,7 @@ func resourceSakuraCloudDiskDelete(d *schema.ResourceData, meta interface{}) err
 	zone, ok := d.GetOk("zone")
 	if ok {
 		originalZone := client.Zone
-		client.Zone = zone
+		client.Zone = zone.(string)
 		defer func() { client.Zone = originalZone }()
 	}
 

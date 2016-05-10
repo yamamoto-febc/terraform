@@ -1,6 +1,9 @@
 package sakuracloud
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/yamamoto-febc/libsacloud/sacloud"
+)
 
 // Takes the result of flatmap.Expand for an array of strings
 // and returns a []*string
@@ -26,4 +29,39 @@ func flattenStringList(list []string) []interface{} {
 		vs = append(vs, v)
 	}
 	return vs
+}
+
+func flattenDisks(disks []sacloud.Disk) []string {
+	var ids []string
+	for _, d := range disks {
+		ids = append(ids, d.ID)
+	}
+	return ids
+}
+
+func flattenInterfaces(interfaces []sacloud.Interface) []interface{} {
+	var ret []interface{}
+	for index, i := range interfaces {
+		if index == 0 {
+			continue
+		}
+		if i.Switch == nil {
+			ret = append(ret, "")
+		} else {
+			switch i.Switch.Scope {
+			case sacloud.ESCopeUser:
+				ret = append(ret, i.Switch.ID)
+			}
+
+		}
+	}
+	return ret
+}
+
+func flattenMacAddresses(interfaces []sacloud.Interface) []string {
+	var ret []string
+	for _, i := range interfaces {
+		ret = append(ret, i.MACAddress)
+	}
+	return ret
 }

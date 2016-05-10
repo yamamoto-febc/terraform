@@ -3,13 +3,13 @@ layout: "sakuracloud"
 page_title: "SakuraCloud: sacloud_disk"
 sidebar_current: "docs-sacloud-resource-disk"
 description: |-
-  Provides a SakuraCloud Disk resource. This can be used to create, and delete Disk records.
+  Provides a SakuraCloud Disk resource. This can be used to create, and delete Disk .
 ---
 
 # sakuracloud\_disk
 
 Provides a SakuraCloud Disk resource. This can be used to create, 
-and delete Disk records.
+and delete Disk .
 
 ## Example Usage
 

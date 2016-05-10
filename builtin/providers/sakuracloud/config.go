@@ -11,5 +11,7 @@ type Config struct {
 }
 
 func (c *Config) NewClient() *API.Client {
-	return API.NewClient(c.AccessToken, c.AccessTokenSecret, c.Zone)
+	client := API.NewClient(c.AccessToken, c.AccessTokenSecret, c.Zone)
+	//client.TraceMode = true
+	return client
 }

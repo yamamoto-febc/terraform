@@ -1,205 +1,394 @@
 package sakuracloud
 
-//import (
-//	"github.com/hashicorp/terraform/helper/schema"
-//	API "github.com/yamamoto-febc/libsacloud/api"
-//	"github.com/yamamoto-febc/libsacloud/sacloud"
-//	"time"
-//)
-//
-//func resourceServer() *schema.Resource {
-//	return &schema.Resource{
-//		Create: createServer,
-//		Read:   readServer,
-//		Delete: deleteServer,
-//
-//		Schema: map[string]*schema.Schema{
-//			"region": &schema.Schema{
-//				Type:     schema.TypeString,
-//				Required: true,
-//			},
-//			"name": &schema.Schema{
-//				Type:     schema.TypeString,
-//				Required: true,
-//			},
-//			"password": &schema.Schema{
-//				Type:     schema.TypeString,
-//				Required: true,
-//			},
-//			"core": &schema.Schema{
-//				Type:     schema.TypeInt,
-//				Default:  1,
-//				Required: true,
-//			},
-//			"memory": &schema.Schema{
-//				Type:     schema.TypeInt,
-//				Default:  1,
-//				Required: true,
-//			},
-//		},
-//	}
-//}
-//
-//func createServer(d *schema.ResourceData, meta interface{}) error {
-//	provider := meta.(*API.Client)
-//
-//	name := d.Get("name").(string)
-//	password := d.Get("password").(string)
-//	provider.Region = d.Get("region").(string)
-//	core := d.Get("core").(int)
-//	memory := d.Get("memory").(int)
-//
-//	//prepare setting values
-//	serverPlan, err := provider.Product.Server.GetBySpec(core, memory)
-//	if err != nil {
-//		return err
-//	}
-//	spec := &sacloud.Server{
-//		Name:              name,
-//		Description:       "",
-//		ServerPlan:        serverPlan.GetResourceKey(),
-//		ConnectedSwitches: []map[string]string{{"Scope": "shared"}},
-//		Tags:              []string{"@virtio-net-pci"},
-//	}
-//
-//	res, err := provider.Create(spec, "")
-//	if err != nil {
-//		return err
-//	}
-//	server := res.Server
-//
-//	var diskPlan int64 = 4 //TODO
-//	diskSpec := &sakura.Disk{
-//		Name: name,
-//		Plan: sakura.NumberResource{
-//			ID: diskPlan,
-//		},
-//		SizeMB:     20480,    // TODO
-//		Connection: "virtio", //TODO
-//		SourceArchive: sakura.Resource{
-//			ID: "112800262964", //TODO
-//		},
-//	}
-//
-//	diskID, err := provider.CreateDisk(diskSpec)
-//	if err != nil {
-//		return err
-//	}
-//
-//	//wait for disk available
-//	waitForDiskAvailable(provider, diskID)
-//
-//	//connect disk for server
-//	connectSuccess, err := provider.ConnectDisk(diskID, server.ID)
-//	if err != nil || !connectSuccess {
-//		return err
-//	}
-//
-//	diskEditspec := &sakura.DiskEditValue{
-//		Password: password,
-//		//SSHKey: sakura.SSHKey{
-//		//	PublicKey: publicKey,
-//		//},
-//		//DisablePWAuth: !d.serverConfig.EnablePWAuth,
-//		//Notes:         notes[:],
-//	}
-//
-//	editSuccess, err := provider.EditDisk(diskID, diskEditspec)
-//	if err != nil || !editSuccess {
-//		return err
-//	}
-//	//wait for disk available
-//	waitForDiskAvailable(provider, diskID)
-//
-//	//start
-//	err = provider.PowerOn(server.ID)
-//	if err != nil {
-//		return err
-//	}
-//	//wait for startup
-//	waitForServerByState(provider, server.ID, "up")
-//
-//	d.Set("name", name)
-//	d.SetId(server.ID)
-//
-//	return readServer(d, meta)
-//}
-//
-//func waitForDiskAvailable(provider *libsacloud.Client, diskID string) {
-//	for {
-//		s, err := provider.DiskState(diskID)
-//		if err != nil {
-//			continue
-//		}
-//
-//		if s == "available" {
-//			break
-//		}
-//		time.Sleep(5 * time.Second)
-//	}
-//}
-//
-//func waitForServerByState(provider *libsacloud.Client, serverID string, waitForState string) {
-//	for {
-//		s, err := getState(provider, serverID)
-//		if err != nil {
-//			continue
-//		}
-//
-//		if s == waitForState {
-//			break
-//		}
-//		time.Sleep(5 * time.Second)
-//	}
-//}
-//
-//func getState(provider *libsacloud.Client, serverID string) (string, error) {
-//	s, err := provider.State(serverID)
-//	if err != nil {
-//		return "", err
-//	}
-//	return s, nil
-//}
-//
-//func readServer(d *schema.ResourceData, meta interface{}) error {
-//	provider := meta.(*libsacloud.Client)
-//
-//	name := d.Get("name").(string)
-//	provider.Region = d.Get("region").(string)
-//
-//	//サーバ検索
-//	server, err := provider.SearchServerByName(name)
-//	if err != nil {
-//		return err
-//	}
-//
-//	d.Set("name", name)
-//	d.SetId(server.ID)
-//
-//	return nil
-//}
-//
-//func deleteServer(d *schema.ResourceData, meta interface{}) error {
-//	provider := meta.(*libsacloud.Client)
-//
-//	name := d.Get("name").(string)
-//	provider.Region = d.Get("region").(string)
-//
-//	//サーバ検索
-//	server, err := provider.SearchServerByName(name)
-//	if err != nil {
-//		return err
-//	}
-//
-//	var disks []string
-//
-//	for _, d := range server.Disks {
-//		disks = append(disks, d.ID)
-//	}
-//	err = provider.Delete(server.ID, disks)
-//	if err != nil {
-//		return err
-//	}
-//
-//	return nil
-//}
+import (
+	"fmt"
+	"github.com/fsouza/go-dockerclient/external/github.com/docker/go-units"
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/yamamoto-febc/libsacloud/api"
+	"github.com/yamamoto-febc/libsacloud/sacloud"
+	"time"
+)
+
+func resourceSakuraCloudServer() *schema.Resource {
+	return &schema.Resource{
+		Create: resourceSakuraCloudServerCreate,
+		Update: resourceSakuraCloudServerUpdate,
+		Read:   resourceSakuraCloudServerRead,
+		Delete: resourceSakuraCloudServerDelete,
+
+		Schema: map[string]*schema.Schema{
+			"name": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"core": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  1,
+			},
+			"memory": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  1,
+			},
+			"disks": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"shared_interface": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
+
+			"switched_interfaces": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 3,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"description": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"tags": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"zone": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
+				Description:  "target SakuraCloud zone",
+				ValidateFunc: validateStringInWord([]string{"is1a", "is1b", "tk1a", "tk1v"}),
+			},
+			"mac_addresses": &schema.Schema{
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+		},
+	}
+}
+
+func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	zone, ok := d.GetOk("zone")
+	if ok {
+		originalZone := client.Zone
+		client.Zone = zone.(string)
+		defer func() { client.Zone = originalZone }()
+	}
+
+	opts := client.Server.New()
+	opts.Name = d.Get("name").(string)
+
+	planID, err := client.Product.Server.GetBySpec(d.Get("core").(int), d.Get("memory").(int))
+	if err != nil {
+		return fmt.Errorf("Invalid server plan.Please change 'core' or 'memory': %s", err)
+	}
+	opts.SetServerPlanByID(planID.ID.String())
+
+	if hasSharedInterface, ok := d.GetOk("shared_interface"); ok && hasSharedInterface.(bool) {
+		opts.AddPublicNWConnectedParam()
+	} else {
+		opts.AddEmptyConnectedParam()
+	}
+
+	if interfaces, ok := d.GetOk("switched_interfaces"); ok {
+		for _, switchID := range interfaces.([]interface{}) {
+			if switchID == nil {
+				opts.AddEmptyConnectedParam()
+			} else {
+				opts.AddExistsSwitchConnectedParam(switchID.(string))
+			}
+		}
+	}
+
+	//description
+	opts.Description = d.Get("description").(string)
+
+	//tags
+	rawTags := d.Get("tags").([]interface{})
+	if rawTags != nil {
+		opts.Tags = expandStringList(rawTags)
+	}
+
+	server, err := client.Server.Create(opts)
+	if err != nil {
+		return fmt.Errorf("Failed to create SakuraCloud Server resource: %s", err)
+	}
+
+	//connect server
+	rawDisks := d.Get("disks").([]interface{})
+	if rawDisks != nil {
+		diskIDs := expandStringList(rawDisks)
+		for _, diskID := range diskIDs {
+			_, err := client.Disk.ConnectToServer(diskID, server.ID)
+			if err != nil {
+				return fmt.Errorf("Failed to connect SakuraCloud Disk to Server: %s", err)
+			}
+		}
+	}
+
+	d.SetId(server.ID)
+	return resourceSakuraCloudServerRead(d, meta)
+
+}
+
+func resourceSakuraCloudServerRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	zone, ok := d.GetOk("zone")
+	if ok {
+		originalZone := client.Zone
+		client.Zone = zone.(string)
+		defer func() { client.Zone = originalZone }()
+	}
+
+	server, err := client.Server.Read(d.Id())
+	if err != nil {
+		return fmt.Errorf("Couldn't find SakuraCloud Server resource: %s", err)
+	}
+
+	d.Set("name", server.Name)
+	d.Set("core", server.ServerPlan.CPU)
+	d.Set("memory", server.ServerPlan.MemoryMB*units.MiB/units.GiB)
+	d.Set("disks", flattenDisks(server.Disks))
+
+	hasSharedInterface := len(server.Interfaces) > 0 &&
+		server.Interfaces[0].Switch != nil &&
+		server.Interfaces[0].Switch.Scope == sacloud.ESCopeShared
+	d.Set("shared_interface", hasSharedInterface)
+
+	d.Set("switched_interfaces", flattenInterfaces(server.Interfaces))
+	d.Set("description", server.Description)
+	d.Set("tags", server.Tags)
+
+	//readonly
+	d.Set("mac_addresses", flattenMacAddresses(server.Interfaces))
+	d.Set("zone", client.Zone)
+
+	return nil
+}
+
+func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	zone, ok := d.GetOk("zone")
+	if ok {
+		originalZone := client.Zone
+		client.Zone = zone.(string)
+		defer func() { client.Zone = originalZone }()
+	}
+
+	server, err := client.Server.Read(d.Id())
+	if err != nil {
+		return fmt.Errorf("Couldn't find SakuraCloud Server resource: %s", err)
+	}
+	isNeedRestart := false
+	currentAvailability := server.Instance.IsUp()
+
+	// 再起動判定
+	if d.HasChange("core") || d.HasChange("memory") {
+		// プラン変更に伴いサーバIDが変更になる
+		planID, err := client.Product.Server.GetBySpec(d.Get("core").(int), d.Get("memory").(int))
+		if err != nil {
+			return fmt.Errorf("Invalid server plan.Please change 'core' or 'memory': %s", err)
+		}
+		server.SetServerPlanByID(planID.ID.String())
+
+		isNeedRestart = true
+	}
+
+	//"disks": &schema.Schema{
+	if d.HasChange("disks") || d.HasChange("shared_interface") || d.HasChange("switched_interfaces") {
+		//ここではフラグ設定のみ、サーバ停止後にディスク接続/切り離しを行う
+		isNeedRestart = true
+	}
+
+	if isNeedRestart && currentAvailability {
+		_, err := client.Server.Stop(d.Id())
+		if err != nil {
+			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
+		}
+
+		err = client.Server.SleepUntilDown(d.Id(), 10*time.Minute)
+		if err != nil {
+			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
+		}
+	}
+
+	// check disks changed
+	if d.HasChange("disks") {
+		//disconnect old disks
+		for _, disk := range server.Disks {
+			_, err := client.Disk.DisconnectFromServer(disk.ID)
+			if err != nil {
+				return fmt.Errorf("Error disconnecting disk from SakuraCloud Server resource: %s", err)
+			}
+		}
+
+		rawDisks := d.Get("disks").([]interface{})
+		if rawDisks != nil {
+			newDisks := expandStringList(rawDisks)
+			// connect new disks
+			for _, diskID := range newDisks {
+				_, err := client.Disk.ConnectToServer(diskID, server.ID)
+				if err != nil {
+					return fmt.Errorf("Error connecting disk to SakuraCloud Server resource: %s", err)
+				}
+			}
+
+		}
+
+	}
+
+	// NIC
+	if d.HasChange("shared_interface") {
+		hasSharedNIC := d.Get("shared_interface").(bool)
+		if hasSharedNIC {
+			client.Interface.ConnectToSharedSegment(server.Interfaces[0].ID)
+		} else {
+			client.Interface.DisconnectFromSwitch(server.Interfaces[0].ID)
+		}
+	}
+	if d.HasChange("switched_interfaces") {
+		//NIC数の調整
+		if conf, ok := d.GetOk("switched_interfaces"); ok {
+
+			newNICCount := len(conf.([]interface{}))
+
+			for i, nic := range server.Interfaces {
+				if i == 0 {
+					continue
+				}
+
+				// disconnect exists NIC
+				if nic.Switch != nil {
+					_, err := client.Interface.DisconnectFromSwitch(nic.ID)
+					if err != nil {
+						return fmt.Errorf("Error disconnecting NIC from SakuraCloud Switch resource: %s", err)
+					}
+				}
+
+				//delete NIC
+				if i > newNICCount {
+					_, err := client.Interface.Delete(nic.ID)
+					if err != nil {
+						return fmt.Errorf("Error deleting SakuraCloud NIC resource: %s", err)
+					}
+				}
+			}
+
+			for i, s := range conf.([]interface{}) {
+				switchID := ""
+				if s != nil {
+					switchID = s.(string)
+				}
+				if len(server.Interfaces) <= i+1 {
+					//create NIC
+					nic := client.Interface.New()
+					nic.SetNewServerID(server.ID)
+					if switchID != "" {
+						nic.SetNewSwitchID(switchID)
+					}
+					_, err := client.Interface.Create(nic)
+					if err != nil {
+						return fmt.Errorf("Error creating NIC to SakuraCloud Server resource: %s", err)
+					}
+
+				} else {
+
+					if switchID != "" {
+						_, err := client.Interface.ConnectToSwitch(server.Interfaces[i+1].ID, switchID)
+						if err != nil {
+							return fmt.Errorf("Error connecting NIC to SakuraCloud Switch resource: %s", err)
+						}
+					}
+				}
+			}
+
+		} else {
+			if len(server.Interfaces) > 1 {
+				for i, nic := range server.Interfaces {
+					if i == 0 {
+						continue
+					}
+
+					_, err := client.Interface.Delete(nic.ID)
+					if err != nil {
+						return fmt.Errorf("Error deleting SakuraCloud NIC resource: %s", err)
+					}
+				}
+			}
+		}
+
+	}
+
+	// change Plan
+	if d.HasChange("core") || d.HasChange("memory") {
+		server, err := client.Server.ChangePlan(d.Id(), server.ServerPlan.ID.String())
+		if err != nil {
+			return fmt.Errorf("Error changing SakuraCloud ServerPlan : %s", err)
+		}
+		//プラン変更でIDが変更される
+		d.SetId(server.ID)
+	}
+
+	if d.HasChange("name") {
+		server.Name = d.Get("name").(string)
+	}
+	if d.HasChange("description") {
+		server.Description = d.Get("description").(string)
+	}
+	if d.HasChange("tags") {
+		rawTags := d.Get("tags").([]interface{})
+		if rawTags != nil {
+			server.Tags = expandStringList(rawTags)
+		}
+	}
+
+	server, err = client.Server.Update(d.Id(), server)
+	if err != nil {
+		return fmt.Errorf("Error updating SakuraCloud Server resource: %s", err)
+	}
+	d.SetId(server.ID)
+
+	if isNeedRestart && currentAvailability {
+		_, err := client.Server.Boot(d.Id())
+		if err != nil {
+			return fmt.Errorf("Error booting SakuraCloud Server resource: %s", err)
+		}
+
+		err = client.Server.SleepUntilUp(d.Id(), 10*time.Minute)
+		if err != nil {
+			return fmt.Errorf("Error booting SakuraCloud Server resource: %s", err)
+		}
+
+	}
+
+	return resourceSakuraCloudServerRead(d, meta)
+
+}
+
+func resourceSakuraCloudServerDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	zone, ok := d.GetOk("zone")
+	if ok {
+		originalZone := client.Zone
+		client.Zone = zone.(string)
+		defer func() { client.Zone = originalZone }()
+	}
+
+	_, err := client.Server.Delete(d.Id())
+
+	if err != nil {
+		return fmt.Errorf("Error deleting SakuraCloud Server resource: %s", err)
+	}
+
+	return nil
+
+}
