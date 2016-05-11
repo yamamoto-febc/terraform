@@ -70,6 +70,27 @@ func resourceSakuraCloudServer() *schema.Resource {
 				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
+			"shared_nw_ipaddress": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"shared_nw_dns_servers": &schema.Schema{
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"shared_nw_gateway": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"shared_nw_address": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"shared_nw_mask_len": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -126,15 +147,41 @@ func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) e
 	rawDisks := d.Get("disks").([]interface{})
 	if rawDisks != nil {
 		diskIDs := expandStringList(rawDisks)
-		for _, diskID := range diskIDs {
+		for i, diskID := range diskIDs {
 			_, err := client.Disk.ConnectToServer(diskID, server.ID)
 			if err != nil {
 				return fmt.Errorf("Failed to connect SakuraCloud Disk to Server: %s", err)
 			}
+
+			// edit disk if connected shared segment
+			if i == 0 && len(server.Interfaces) > 0 && server.Interfaces[0].Switch != nil && server.Interfaces[0].Switch.Scope == sacloud.ESCopeShared {
+				diskEditConfig := client.Disk.NewCondig()
+				diskEditConfig.SetUserIPAddress(server.Interfaces[0].IPAddress)
+				diskEditConfig.SetDefaultRoute(server.Interfaces[0].Switch.Subnet.DefaultRoute)
+				diskEditConfig.SetNetworkMaskLen(fmt.Sprintf("%d", server.Interfaces[0].Switch.Subnet.NetworkMaskLen))
+
+				_, err := client.Disk.Config(diskID, diskEditConfig)
+				if err != nil {
+					return fmt.Errorf("Error editting SakuraCloud DiskConfig: %s", err)
+				}
+			}
+
 		}
 	}
 
 	d.SetId(server.ID)
+
+	//boot
+	_, err = client.Server.Boot(d.Id())
+
+	if err != nil {
+		return fmt.Errorf("Failed to boot SakuraCloud Server resource: %s", err)
+	}
+	err = client.Server.SleepUntilUp(d.Id(), 10*time.Minute)
+	if err != nil {
+		return fmt.Errorf("Failed to boot SakuraCloud Server resource: %s", err)
+	}
+
 	return resourceSakuraCloudServerRead(d, meta)
 
 }
@@ -169,6 +216,21 @@ func resourceSakuraCloudServerRead(d *schema.ResourceData, meta interface{}) err
 
 	//readonly
 	d.Set("mac_addresses", flattenMacAddresses(server.Interfaces))
+
+	if hasSharedInterface {
+		d.Set("shared_nw_ipaddress", server.Interfaces[0].IPAddress)
+		d.Set("shared_nw_dns_servers", server.Zone.Region.NameServers)
+		d.Set("shared_nw_gateway", server.Interfaces[0].Switch.Subnet.DefaultRoute)
+		d.Set("shared_nw_address", server.Interfaces[0].Switch.Subnet.NetworkAddress)
+		d.Set("shared_nw_mask_len", fmt.Sprintf("%d", server.Interfaces[0].Switch.Subnet.NetworkMaskLen))
+	} else {
+		d.Set("shared_nw_ipaddress", "")
+		d.Set("shared_nw_dns_servers", []string{})
+		d.Set("shared_nw_gateway", "")
+		d.Set("shared_nw_address", "")
+		d.Set("shared_nw_mask_len", "")
+	}
+
 	d.Set("zone", client.Zone)
 
 	return nil
@@ -210,7 +272,7 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 	}
 
 	if isNeedRestart && currentAvailability {
-		_, err := client.Server.Stop(d.Id())
+		_, err := client.Server.Shutdown(d.Id())
 		if err != nil {
 			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
 		}
@@ -342,8 +404,13 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		server.Name = d.Get("name").(string)
 	}
 	if d.HasChange("description") {
-		server.Description = d.Get("description").(string)
+		if description, ok := d.GetOk("description"); ok {
+			server.Description = description.(string)
+		} else {
+			server.Description = ""
+		}
 	}
+
 	if d.HasChange("tags") {
 		rawTags := d.Get("tags").([]interface{})
 		if rawTags != nil {
@@ -382,8 +449,24 @@ func resourceSakuraCloudServerDelete(d *schema.ResourceData, meta interface{}) e
 		client.Zone = zone.(string)
 		defer func() { client.Zone = originalZone }()
 	}
+	server, err := client.Server.Read(d.Id())
+	if err != nil {
+		return fmt.Errorf("Couldn't find SakuraCloud Server resource: %s", err)
+	}
 
-	_, err := client.Server.Delete(d.Id())
+	if server.Instance.IsUp() {
+		_, err := client.Server.Stop(d.Id())
+		if err != nil {
+			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
+		}
+
+		err = client.Server.SleepUntilDown(d.Id(), 10*time.Minute)
+		if err != nil {
+			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
+		}
+	}
+
+	_, err = client.Server.Delete(d.Id())
 
 	if err != nil {
 		return fmt.Errorf("Error deleting SakuraCloud Server resource: %s", err)

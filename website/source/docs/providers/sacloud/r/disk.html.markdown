@@ -43,8 +43,10 @@ The following arguments are supported:
 * `description` - (Optional) The description of the disk
 * `tags` - (Optional) The tags of the disk
 * `zone` - (Optional) The zone of to create disk
-
-
+* `password` - (Optional) The password of the disk
+* `ssh_key_ids` - (Optional) The ID list of SSHKey.
+* `disable_pw_auth` - (Optional) The flag that to disable SSH login with password authentication / challenge-response. default id `false`.
+* `note_ids` - (Optional) The ID list of Note.
 
 ## Attributes Reference
 
@@ -62,3 +64,7 @@ The following attributes are exported:
 * `description` - The description of the disk
 * `tags` - The tags of the disk
 * `zone` - The zone of the disk
+* `password` - The password of the disk/
+* `ssh_key_ids` The ID list of SSHKey.
+* `disable_pw_auth` - The flag that to disable SSH login with password authentication / challenge-response.
+* `note_ids` - The ID list of Note.

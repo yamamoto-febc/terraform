@@ -6,6 +6,21 @@ import (
 	"strings"
 )
 
+func validateMaxLength(minLength, maxLength int) schema.SchemaValidateFunc {
+	return func(v interface{}, k string) (ws []string, errors []error) {
+		value := v.(string)
+		if len(value) < minLength {
+			errors = append(errors, fmt.Errorf(
+				"%q cannot be shorter than %d characters: %q", k, minLength, value))
+		}
+		if len(value) > maxLength {
+			errors = append(errors, fmt.Errorf(
+				"%q cannot be longer than %d characters: %q", k, maxLength, value))
+		}
+		return
+	}
+}
+
 func validateIntegerInRange(min, max int) schema.SchemaValidateFunc {
 	return func(v interface{}, k string) (ws []string, errors []error) {
 		value := v.(int)

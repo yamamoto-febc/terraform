@@ -31,15 +31,13 @@ The following arguments are supported:
 * `name` - (Required) The name of the server
 * `disks` - (Required) The ID list of the disk to connect server
 * `core` - (Optional) The number of CPU core. default `1`
-* `memory` - (Optional) The size of memory(MB). default `1024`
+* `memory` - (Optional) The size of memory(GB). default `1`
 * `shared_interface` - (Optional) The flag of to create a NIC to connect to a shared segment.
 * `switched_interfaces` - (Optional) The ID list of to create a NIC to connect to switch.
    If `""` is specified , it creates a NIC unconnected.
 * `description` - (Optional) The description of the server
 * `tags` - (Optional) The tags of the server
 * `zone` - (Optional) The zone of to create server
-
-
 
 ## Attributes Reference
 
@@ -55,3 +53,9 @@ The following attributes are exported:
 * `description` - The description of the server.
 * `tags` - The tags of the server.
 * `zone` - The zone of the server.
+* `mac_addresses` - The MAC address list of the server.
+* `shared_nw_ipaddress` - The IP address that are connected to the shared segment.
+* `shared_nw_dns_servers` - The IP address list of server's region on.
+* `shared_nw_gateway` - The IP address of default route.
+* `shared_nw_address` - The network address of the shared segment.
+* `shared_nw_mask_len` - The length of network mask of the shared segment.
