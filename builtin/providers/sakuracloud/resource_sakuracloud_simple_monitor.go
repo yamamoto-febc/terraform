@@ -292,9 +292,13 @@ func resourceSakuraCloudSimpleMonitorUpdate(d *schema.ResourceData, meta interfa
 
 	if notifyEmail {
 		simpleMonitor.EnableNotifyEmail()
+	} else {
+		simpleMonitor.DisableNotifyEmail()
 	}
 	if notifySlack {
 		simpleMonitor.EnableNofitySlack(d.Get("notify_slack_webhook").(string))
+	} else {
+		simpleMonitor.DisableNotifySlack()
 	}
 
 	simpleMonitor, err = client.SimpleMonitor.Update(simpleMonitor.ID, simpleMonitor)
