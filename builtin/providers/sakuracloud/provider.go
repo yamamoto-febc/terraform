@@ -28,6 +28,11 @@ func Provider() terraform.ResourceProvider {
 				Description:  "default target SakuraCloud zone",
 				ValidateFunc: validateStringInWord([]string{"is1a", "is1b", "tk1a", "tk1v"}),
 			},
+			"trace": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("SAKURACLOUD_TRACE_MODE", false),
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"sakuracloud_disk":           resourceSakuraCloudDisk(),
@@ -45,6 +50,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		AccessToken:       d.Get("token").(string),
 		AccessTokenSecret: d.Get("secret").(string),
 		Zone:              d.Get("zone").(string),
+		TraceMode:         d.Get("trace").(bool),
 	}
 
 	return config.NewClient(), nil

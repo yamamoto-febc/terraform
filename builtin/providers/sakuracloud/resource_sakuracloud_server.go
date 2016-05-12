@@ -129,10 +129,7 @@ func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) e
 		}
 	}
 
-	//description
 	opts.Description = d.Get("description").(string)
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
@@ -143,7 +140,7 @@ func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Failed to create SakuraCloud Server resource: %s", err)
 	}
 
-	//connect server
+	//connect disk to server
 	rawDisks := d.Get("disks").([]interface{})
 	if rawDisks != nil {
 		diskIDs := expandStringList(rawDisks)
@@ -153,7 +150,7 @@ func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) e
 				return fmt.Errorf("Failed to connect SakuraCloud Disk to Server: %s", err)
 			}
 
-			// edit disk if connected shared segment
+			// edit disk if server is connected the shared segment
 			if i == 0 && len(server.Interfaces) > 0 && server.Interfaces[0].Switch != nil && server.Interfaces[0].Switch.Scope == sacloud.ESCopeShared {
 				diskEditConfig := client.Disk.NewCondig()
 				diskEditConfig.SetUserIPAddress(server.Interfaces[0].IPAddress)
@@ -168,12 +165,10 @@ func resourceSakuraCloudServerCreate(d *schema.ResourceData, meta interface{}) e
 
 		}
 	}
-
 	d.SetId(server.ID)
 
 	//boot
 	_, err = client.Server.Boot(d.Id())
-
 	if err != nil {
 		return fmt.Errorf("Failed to boot SakuraCloud Server resource: %s", err)
 	}
@@ -209,14 +204,13 @@ func resourceSakuraCloudServerRead(d *schema.ResourceData, meta interface{}) err
 		server.Interfaces[0].Switch != nil &&
 		server.Interfaces[0].Switch.Scope == sacloud.ESCopeShared
 	d.Set("shared_interface", hasSharedInterface)
-
 	d.Set("switched_interfaces", flattenInterfaces(server.Interfaces))
+
 	d.Set("description", server.Description)
 	d.Set("tags", server.Tags)
 
-	//readonly
+	//readonly values
 	d.Set("mac_addresses", flattenMacAddresses(server.Interfaces))
-
 	if hasSharedInterface {
 		d.Set("shared_nw_ipaddress", server.Interfaces[0].IPAddress)
 		d.Set("shared_nw_dns_servers", server.Zone.Region.NameServers)
@@ -230,7 +224,6 @@ func resourceSakuraCloudServerRead(d *schema.ResourceData, meta interface{}) err
 		d.Set("shared_nw_address", "")
 		d.Set("shared_nw_mask_len", "")
 	}
-
 	d.Set("zone", client.Zone)
 
 	return nil
@@ -238,6 +231,8 @@ func resourceSakuraCloudServerRead(d *schema.ResourceData, meta interface{}) err
 
 func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
+
+	shutdownFunc := client.Server.Stop
 
 	zone, ok := d.GetOk("zone")
 	if ok {
@@ -251,11 +246,10 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Couldn't find SakuraCloud Server resource: %s", err)
 	}
 	isNeedRestart := false
-	currentAvailability := server.Instance.IsUp()
+	isRunning := server.Instance.IsUp()
 
-	// 再起動判定
 	if d.HasChange("core") || d.HasChange("memory") {
-		// プラン変更に伴いサーバIDが変更になる
+		// If planID changed , server ID will change.
 		planID, err := client.Product.Server.GetBySpec(d.Get("core").(int), d.Get("memory").(int))
 		if err != nil {
 			return fmt.Errorf("Invalid server plan.Please change 'core' or 'memory': %s", err)
@@ -265,14 +259,13 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		isNeedRestart = true
 	}
 
-	//"disks": &schema.Schema{
 	if d.HasChange("disks") || d.HasChange("shared_interface") || d.HasChange("switched_interfaces") {
-		//ここではフラグ設定のみ、サーバ停止後にディスク接続/切り離しを行う
 		isNeedRestart = true
 	}
 
-	if isNeedRestart && currentAvailability {
-		_, err := client.Server.Shutdown(d.Id())
+	if isNeedRestart && isRunning {
+		// shudown server
+		_, err := shutdownFunc(d.Id())
 		if err != nil {
 			return fmt.Errorf("Error stopping SakuraCloud Server resource: %s", err)
 		}
@@ -283,9 +276,8 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		}
 	}
 
-	// check disks changed
 	if d.HasChange("disks") {
-		//disconnect old disks
+		//disconnect all old disks
 		for _, disk := range server.Disks {
 			_, err := client.Disk.DisconnectFromServer(disk.ID)
 			if err != nil {
@@ -296,7 +288,7 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		rawDisks := d.Get("disks").([]interface{})
 		if rawDisks != nil {
 			newDisks := expandStringList(rawDisks)
-			// connect new disks
+			// connect disks
 			for _, diskID := range newDisks {
 				_, err := client.Disk.ConnectToServer(diskID, server.ID)
 				if err != nil {
@@ -318,11 +310,8 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		}
 	}
 	if d.HasChange("switched_interfaces") {
-		//NIC数の調整
 		if conf, ok := d.GetOk("switched_interfaces"); ok {
-
 			newNICCount := len(conf.([]interface{}))
-
 			for i, nic := range server.Interfaces {
 				if i == 0 {
 					continue
@@ -396,7 +385,6 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 		if err != nil {
 			return fmt.Errorf("Error changing SakuraCloud ServerPlan : %s", err)
 		}
-		//プラン変更でIDが変更される
 		d.SetId(server.ID)
 	}
 
@@ -424,7 +412,7 @@ func resourceSakuraCloudServerUpdate(d *schema.ResourceData, meta interface{}) e
 	}
 	d.SetId(server.ID)
 
-	if isNeedRestart && currentAvailability {
+	if isNeedRestart && isRunning {
 		_, err := client.Server.Boot(d.Id())
 		if err != nil {
 			return fmt.Errorf("Error booting SakuraCloud Server resource: %s", err)

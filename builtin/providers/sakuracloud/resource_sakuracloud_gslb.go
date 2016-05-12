@@ -110,7 +110,6 @@ func resourceSakuraCloudGSLBCreate(d *schema.ResourceData, meta interface{}) err
 
 	opts := client.GSLB.New(d.Get("name").(string))
 
-	//healthcheck(protocol,delay_loop ,host_header,path,status,port)
 	healthCheckConf := d.Get("health_check").(*schema.Set)
 	for _, c := range healthCheckConf.List() {
 		conf := c.(map[string]interface{})
@@ -123,18 +122,15 @@ func resourceSakuraCloudGSLBCreate(d *schema.ResourceData, meta interface{}) err
 				Path:     conf["path"].(string),
 				Status:   conf["status"].(string),
 			}
-
 		case "tcp":
 			opts.Settings.GSLB.HealthCheck = sacloud.GSLBHealthCheck{
 				Protocol: protocol,
 				Port:     fmt.Sprintf("%d", conf["port"].(int)),
 			}
-
 		case "ping":
 			opts.Settings.GSLB.HealthCheck = sacloud.GSLBHealthCheck{
 				Protocol: protocol,
 			}
-
 		}
 
 		opts.Settings.GSLB.DelayLoop = conf["delay_loop"].(int)
@@ -145,18 +141,13 @@ func resourceSakuraCloudGSLBCreate(d *schema.ResourceData, meta interface{}) err
 		opts.Settings.GSLB.Weighted = "False"
 	}
 
-	//description
 	opts.Description = d.Get("description").(string)
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
 	}
 
-	//
 	servers := d.Get("servers").([]interface{})
-
 	for _, r := range servers {
 		serverConf := r.(map[string]interface{})
 		server := opts.CreateGSLBServer(serverConf["ipaddress"].(string))
@@ -230,7 +221,6 @@ func resourceSakuraCloudGSLBUpdate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if d.HasChange("health_check") {
-		//healthcheck(protocol,delay_loop ,host_header,path,status,port)
 		healthCheckConf := d.Get("health_check").(*schema.Set)
 		for _, c := range healthCheckConf.List() {
 			conf := c.(map[string]interface{})
@@ -243,18 +233,15 @@ func resourceSakuraCloudGSLBUpdate(d *schema.ResourceData, meta interface{}) err
 					Path:     conf["path"].(string),
 					Status:   conf["status"].(string),
 				}
-
 			case "tcp":
 				gslb.Settings.GSLB.HealthCheck = sacloud.GSLBHealthCheck{
 					Protocol: protocol,
 					Port:     fmt.Sprintf("%d", conf["port"].(int)),
 				}
-
 			case "ping":
 				gslb.Settings.GSLB.HealthCheck = sacloud.GSLBHealthCheck{
 					Protocol: protocol,
 				}
-
 			}
 
 			gslb.Settings.GSLB.DelayLoop = conf["delay_loop"].(int)
@@ -268,22 +255,23 @@ func resourceSakuraCloudGSLBUpdate(d *schema.ResourceData, meta interface{}) err
 		gslb.Settings.GSLB.Weighted = "False"
 	}
 
-	//description
 	if d.HasChange("description") {
-		gslb.Description = d.Get("description").(string)
+		if description, ok := d.GetOk("description"); ok {
+			gslb.Description = description.(string)
+		} else {
+			gslb.Description = ""
+		}
 	}
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		gslb.Tags = expandStringList(rawTags)
 	}
 
-	//
 	if d.HasChange("servers") {
 		servers := d.Get("servers").([]interface{})
-		gslb.ClearGSLBServer()
 
+		// Servers will set by DELETE-INSERT
+		gslb.ClearGSLBServer()
 		for _, r := range servers {
 			serverConf := r.(map[string]interface{})
 			server := gslb.CreateGSLBServer(serverConf["ipaddress"].(string))

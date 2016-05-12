@@ -8,10 +8,13 @@ type Config struct {
 	AccessToken       string
 	AccessTokenSecret string
 	Zone              string
+	TraceMode         bool
 }
 
 func (c *Config) NewClient() *API.Client {
 	client := API.NewClient(c.AccessToken, c.AccessTokenSecret, c.Zone)
-	//client.TraceMode = true
+	if c.TraceMode {
+		client.TraceMode = true
+	}
 	return client
 }

@@ -77,6 +77,9 @@ func testAccCheckSakuraCloudDiskExists(n string, disk *sacloud.Disk) resource.Te
 		}
 
 		client := testAccProvider.Meta().(*api.Client)
+		originalZone := client.Zone
+		client.Zone = "tk1v"
+		defer func() { client.Zone = originalZone }()
 
 		foundDisk, err := client.Disk.Read(rs.Primary.ID)
 
@@ -110,6 +113,9 @@ func testAccCheckSakuraCloudDiskAttributes(disk *sacloud.Disk) resource.TestChec
 
 func testAccCheckSakuraCloudDiskDestroy(s *terraform.State) error {
 	client := testAccProvider.Meta().(*api.Client)
+	originalZone := client.Zone
+	client.Zone = "tk1v"
+	defer func() { client.Zone = originalZone }()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "sakuracloud_disk" {
@@ -132,6 +138,7 @@ resource "sakuracloud_disk" "foobar" {
     source_archive_name = "Ubuntu Server 14"
     description = "Disk from TerraForm for SAKURA CLOUD"
     tags = ["hoge1" , "hoge2"]
+    zone = "tk1v"
 }`
 
 var testAccCheckSakuraCloudDiskConfig_update = `
@@ -141,4 +148,5 @@ resource "sakuracloud_disk" "foobar" {
     description = "Disk from TerraForm for SAKURA CLOUD"
     tags = ["hoge1" , "hoge2"]
     disable_pw_auth = true
+    zone = "tk1v"
 }`

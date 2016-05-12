@@ -134,21 +134,14 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 
 	opts := client.Disk.New()
 
-	//name
 	opts.Name = d.Get("name").(string)
-
-	//plan
 	opts.Plan.SetIDByString(d.Get("plan").(string))
-
-	//connection
 	opts.Connection = sacloud.EDiskConnection(d.Get("connection").(string))
 
-	//source archieve/disk
 	archiveID, ok := d.GetOk("source_archive_id")
 	if ok {
 		opts.SetSourceArchive(archiveID.(string))
 	}
-	//search archive
 	archiveName, ok := d.GetOk("source_archive_name")
 	if ok {
 		res, err := client.Archive.WithNameLike(archiveName.(string)).Include("ID").Limit(1).Find()
@@ -162,7 +155,6 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 	if ok {
 		opts.SetSourceDisk(diskID.(string))
 	}
-	//search disk
 	diskName, ok := d.GetOk("source_disk_name")
 	if ok {
 		res, err := client.Disk.WithNameLike(diskName.(string)).Include("ID").Limit(1).Find()
@@ -172,13 +164,9 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 		opts.SetSourceDisk(res.Disks[0].ID)
 	}
 
-	//size
 	opts.SizeMB = d.Get("size").(int) * units.GiB / units.MiB
-
-	//description
 	opts.Description = d.Get("description").(string)
 
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
@@ -202,7 +190,6 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 	if password, ok := d.GetOk("password"); ok {
 		diskEditCondig.SetPassword(password.(string))
 	}
-
 	if sshKeyIDs, ok := d.GetOk("ssh_key_ids"); ok {
 		ids := expandStringList(sshKeyIDs.([]interface{}))
 		diskEditCondig.SetSSHKeys(ids)
@@ -215,12 +202,12 @@ func resourceSakuraCloudDiskCreate(d *schema.ResourceData, meta interface{}) err
 		diskEditCondig.SetNotes(ids)
 	}
 
+	// call disk edit API
 	_, err = client.Disk.Config(disk.ID, diskEditCondig)
 	if err != nil {
 		return fmt.Errorf("Error editting SakuraCloud DiskConfig: %s", err)
 	}
 
-	//server_id
 	server_id, ok := d.GetOk("server_id")
 	if ok {
 		_, err = client.Disk.ConnectToServer(disk.ID, server_id.(string))
@@ -277,8 +264,6 @@ func resourceSakuraCloudDiskUpdate(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return fmt.Errorf("Couldn't find SakuraCloud Disk resource: %s", err)
 	}
-
-	// need shutdown
 
 	// has server_id and server is up,shutdown
 	isRunning := disk.Server != nil && disk.Server.Instance.IsUp()

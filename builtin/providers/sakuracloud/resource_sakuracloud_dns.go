@@ -82,16 +82,11 @@ func resourceSakuraCloudDNSCreate(d *schema.ResourceData, meta interface{}) erro
 	client := meta.(*api.Client)
 
 	opts := client.DNS.New(d.Get("zone").(string))
-
-	//description
 	opts.Description = d.Get("description").(string)
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
 	}
-
 	records := d.Get("records").([]interface{})
 
 	for _, r := range records {
@@ -150,6 +145,7 @@ func resourceSakuraCloudDNSRead(d *schema.ResourceData, meta interface{}) error 
 		}
 
 		if record.Type == "MX" {
+			// ex. record.RData = "10 example.com."
 			values := strings.SplitN(record.RData, " ", 2)
 			r["value"] = values[1]
 			r["priority"] = values[0]
@@ -170,15 +166,13 @@ func resourceSakuraCloudDNSUpdate(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("Couldn't find SakuraCloud DNS resource: %s", err)
 	}
 
-	//TODO set
-	//Icon
-
-	//Description
 	if d.HasChange("description") {
-		opts.Description = d.Get("description").(string)
+		if description, ok := d.GetOk("description"); ok {
+			opts.Description = description.(string)
+		} else {
+			opts.Description = ""
+		}
 	}
-
-	//Tags
 	if d.HasChange("tags") {
 		rawTags := d.Get("tags").([]interface{})
 		if rawTags == nil {
@@ -189,10 +183,9 @@ func resourceSakuraCloudDNSUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	}
 
+	// records will set by DELETE-INSERT
 	opts.ClearRecords()
-
 	records := d.Get("records").([]interface{})
-
 	for _, r := range records {
 		recordConf := r.(map[string]interface{})
 		rtype := recordConf["type"].(string)

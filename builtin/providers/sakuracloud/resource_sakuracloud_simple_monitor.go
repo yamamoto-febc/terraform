@@ -104,7 +104,6 @@ func resourceSakuraCloudSimpleMonitorCreate(d *schema.ResourceData, meta interfa
 
 	opts := client.SimpleMonitor.New(d.Get("target").(string))
 
-	//healthcheck(protocol,delay_loop ,path,status,port,qname , expected_data)
 	healthCheckConf := d.Get("health_check").(*schema.Set)
 	for _, c := range healthCheckConf.List() {
 		conf := c.(map[string]interface{})
@@ -127,27 +126,20 @@ func resourceSakuraCloudSimpleMonitorCreate(d *schema.ResourceData, meta interfa
 				Protocol: protocol,
 				Port:     fmt.Sprintf("%d", conf["port"].(int)),
 			}
-
 		case "ping":
 			opts.Settings.SimpleMonitor.HealthCheck = &sacloud.SimpleMonitorHealthCheck{
 				Protocol: protocol,
 			}
-
 		}
 
 		opts.Settings.SimpleMonitor.DelayLoop = conf["delay_loop"].(int)
 	}
 
-	//description
 	opts.Description = d.Get("description").(string)
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
 	}
-
-	//enabled
 	if d.Get("enabled").(bool) {
 		opts.Settings.SimpleMonitor.Enabled = "True"
 	} else {
@@ -186,8 +178,6 @@ func resourceSakuraCloudSimpleMonitorRead(d *schema.ResourceData, meta interface
 
 	d.Set("target", simpleMonitor.Status.Target)
 
-	//health_check
-	//healthcheck(protocol,delay_loop ,path,status,port,qname , expected_data)
 	healthCheck := map[string]interface{}{}
 	switch simpleMonitor.Settings.SimpleMonitor.HealthCheck.Protocol {
 	case "http", "https":
@@ -221,7 +211,6 @@ func resourceSakuraCloudSimpleMonitorRead(d *schema.ResourceData, meta interface
 }
 
 func resourceSakuraCloudSimpleMonitorUpdate(d *schema.ResourceData, meta interface{}) error {
-
 	client := meta.(*api.Client)
 
 	simpleMonitor, err := client.SimpleMonitor.Read(d.Id())
@@ -230,7 +219,6 @@ func resourceSakuraCloudSimpleMonitorUpdate(d *schema.ResourceData, meta interfa
 	}
 
 	if d.HasChange("health_check") {
-		//healthcheck(protocol,delay_loop ,path,status,port,qname , expected_data)
 		healthCheckConf := d.Get("health_check").(*schema.Set)
 		for _, c := range healthCheckConf.List() {
 			conf := c.(map[string]interface{})
@@ -253,25 +241,22 @@ func resourceSakuraCloudSimpleMonitorUpdate(d *schema.ResourceData, meta interfa
 					Protocol: protocol,
 					Port:     fmt.Sprintf("%d", conf["port"].(int)),
 				}
-
 			case "ping":
 				simpleMonitor.Settings.SimpleMonitor.HealthCheck = &sacloud.SimpleMonitorHealthCheck{
 					Protocol: protocol,
 				}
-
 			}
-
 			simpleMonitor.Settings.SimpleMonitor.DelayLoop = conf["delay_loop"].(int)
 		}
-
 	}
 
-	//description
 	if d.HasChange("description") {
-		simpleMonitor.Description = d.Get("description").(string)
+		if description, ok := d.GetOk("description"); ok {
+			simpleMonitor.Description = description.(string)
+		} else {
+			simpleMonitor.Description = ""
+		}
 	}
-
-	//tags
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		simpleMonitor.Tags = expandStringList(rawTags)
