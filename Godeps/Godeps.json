@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/hashicorp/terraform",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v63",
+	"GodepVersion": "v66",
 	"Packages": [
 		"./..."
 	],
@@ -453,6 +453,11 @@
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/emr",
 			"Comment": "v1.1.15",
+			"Rev": "2cc71659118a868dc7544a7ef0808eb42d487011"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/emr/emriface",
+			"Comment": "v1.1.23",
 			"Rev": "2cc71659118a868dc7544a7ef0808eb42d487011"
 		},
 		{
@@ -1239,11 +1244,6 @@
 			"Rev": "983d3a5fab1bf04d1b412465d2d9f8430e2e917e"
 		},
 		{
-			"ImportPath": "github.com/ryanuber/columnize",
-			"Comment": "v2.0.1-8-g983d3a5",
-			"Rev": "983d3a5fab1bf04d1b412465d2d9f8430e2e917e"
-		},
-		{
 			"ImportPath": "github.com/satori/go.uuid",
 			"Rev": "d41af8bb6a7704f00bc3b7cba9355ae6a5a80048"
 		},
@@ -1347,6 +1347,16 @@
 		{
 			"ImportPath": "github.com/xanzy/ssh-agent",
 			"Rev": "ba9c9e33906f58169366275e3450db66139a31a9"
+		},
+		{
+			"ImportPath": "github.com/yamamoto-febc/libsacloud/api",
+			"Comment": "v0.0.1-20-g3549d48",
+			"Rev": "3549d489a9d9ede341efa83ee60e6006936cb651"
+		},
+		{
+			"ImportPath": "github.com/yamamoto-febc/libsacloud/sacloud",
+			"Comment": "v0.0.1-20-g3549d48",
+			"Rev": "3549d489a9d9ede341efa83ee60e6006936cb651"
 		},
 		{
 			"ImportPath": "github.com/ziutek/mymysql/mysql",
