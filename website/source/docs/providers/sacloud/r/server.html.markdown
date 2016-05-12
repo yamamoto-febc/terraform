@@ -28,16 +28,16 @@ resource "sakuracloud_server" "myserver" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the server
-* `disks` - (Required) The ID list of the disk to connect server
-* `core` - (Optional) The number of CPU core. default `1`
-* `memory` - (Optional) The size of memory(GB). default `1`
+* `name` - (Required) The name of the server.
+* `disks` - (Required) The ID list of the disk to connect server.
+* `core` - (Optional) The number of CPU core. default `1`.
+* `memory` - (Optional) The size of memory(GB). default `1`.
 * `shared_interface` - (Optional) The flag of to create a NIC to connect to a shared segment.
 * `switched_interfaces` - (Optional) The ID list of to create a NIC to connect to switch.
-   If `""` is specified , it creates a NIC unconnected.
-* `description` - (Optional) The description of the server
-* `tags` - (Optional) The tags of the server
-* `zone` - (Optional) The zone of to create server
+   If `""` is specified , it creates a NIC with empty connection.
+* `description` - (Optional) The description of the server.
+* `tags` - (Optional) The tags of the server.
+* `zone` - (Optional) The zone of to create server.
 
 ## Attributes Reference
 

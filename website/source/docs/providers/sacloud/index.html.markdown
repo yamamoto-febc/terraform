@@ -43,3 +43,8 @@ The following arguments are supported:
   
 * `zone` - (Required) This is the SakuraCloud zone. This can also be specified
   with the `SAKURACLOUD_ZONE` shell environment variable.
+  
+* `trace` - (Optional) Flag of trace mode. This can also be specified
+  with the `SAKURACLOUD_TRACE_MODE` shell environment variable.
+  
+      

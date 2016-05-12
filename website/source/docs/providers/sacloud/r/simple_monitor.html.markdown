@@ -6,7 +6,7 @@ description: |-
   Provides a SakuraCloud DNS resource. This can be used to create, modify, and delete DNS records.
 ---
 
-# sakuracloud\_dns
+# sakuracloud\_simple\_monitor
 
 Provides a SakuraCloud DNS resource. This can be used to create,
 modify, and delete DNS records. 

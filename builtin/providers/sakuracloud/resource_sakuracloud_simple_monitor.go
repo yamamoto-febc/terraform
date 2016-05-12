@@ -135,7 +135,9 @@ func resourceSakuraCloudSimpleMonitorCreate(d *schema.ResourceData, meta interfa
 		opts.Settings.SimpleMonitor.DelayLoop = conf["delay_loop"].(int)
 	}
 
-	opts.Description = d.Get("description").(string)
+	if description, ok := d.GetOk("description"); ok {
+		opts.Description = description.(string)
+	}
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)

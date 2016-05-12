@@ -8,7 +8,7 @@ description: |-
 
 # sakuracloud\_gslb
 
-Provides a SakuraCloud GSLB(Global Site Load Balancer) resource. This can be used to create,
+Provides a SakuraCloud GSLB(Global Site Load Balancing) resource. This can be used to create,
 modify, and delete GSLB. 
 
 ## Example Usage
@@ -18,20 +18,19 @@ modify, and delete GSLB.
 resource "sakuracloud_gslb" "mygslb" {
     name = "gslb_from_terraform"
     health_check = {
-        protocol = "tcp"
+        protocol = "http"
         delay_loop = 10
-        port = 80
-#        host_header = "libsacloud.com"
-#        path = "/index.html"
-#        status = "200"
+        host_header = "example.com"
+        path = "/"
+        status = "200"
     }
     description = "GSLB from terraform for SAKURA CLOUD"
     tags = ["hoge1" , "hoge2" ]
     servers = {
-      ipaddress = "133.242.1.1"
+      ipaddress = "192.0.2.1"
     }
     servers = {
-      ipaddress = "133.242.1.2"
+      ipaddress = "192.0.2.2"
     }
 
 }
@@ -41,36 +40,41 @@ resource "sakuracloud_gslb" "mygslb" {
 
 The following arguments are supported:
 
-* `zone` - (Required) The DNS target zone name
-* `description` - (Required) The region to start in
-* `tags` - (Required) The instance size to start
-* `records` - (Optional) The records of target zone
-  * `name` - (Required) The name of the record
-  * `type` - (Required) The type of the record
-  * `value` - (Required) The value of the record
-  * `ttl` - (Optional) The TTL of the record . default `3600`
-  * `priority` - (Optional) (Only type is MX) The priority of the record
-
+* `name` - (Required) The name of GSLB.
+* `health_check` - (Required) The health_check rule of GSLB.
+  * `protocol` - (Required) The protocol to use for health check. Must be in [`http`,`https`,`tcp`,`ping`]
+  * `dalay_loop` - (Optional) The delay_loop of health check. Must be between `10` and `60`. default is `10`
+  * `host_header` - (Only protocol is `http` or `https`) The host_header to use for health check.
+  * `path` - (Only when protocol is `http` or `https`) The request path to use for health check.
+  * `status` - (Only when protocol is `http` or `https`) The response code of health check request.
+  * `port` - (Only when protocol is `tcp`) The port number to use for health check.
+* `weighted` - (Optional)The flag of enabling to weighted balancing. default `false`
+* `description` - (Optional) The description of GSLB.
+* `tags` - (Required) The tags of GSLB.
+* `servers` (Optional) The target servers of GSLB.
+  * `ipaddress` - The IPAddress of target server.
+  * `enabled` - The flag of enabling to target server.
+  * `weight` - (Only when `weighted` is true)The weight of target server.
 
 
 ## Attributes Reference
 
 The following attributes are exported:
 
-* `id` - The ID of the DNS
-* `name`- The domain name of the target zone
-* `FQDN` - The name servers of the target zone
-* `health_check` - The records of target zone
-  * `protocol` - The name of the record
-  * `dalay_loop` - The type of the record
-  * `host_header` - The value of the record
-  * `path` - The TTL of the record
-  * `status` - (Only type is MX) The priority of the record
-  * `port` - (Only type is MX) The priority of the record
-* `weighted` - The name servers of the target zone
-* `description` - The description of target zone
-* `tags` - The description of target zone
-* `servers` - The records of target zone
-  * `ipaddress` - The name of the record
-  * `enabled` - The type of the record
-  * `weight` - The value of the record
+* `id` - The ID of the GSLB.
+* `name`- The name of GSLB.
+* `health_check` - The health_check rule of GSLB.
+  * `protocol` - The protocol to use for health check.
+  * `dalay_loop` - The delay_loop of health check.
+  * `host_header` - The host_header to use for health check.
+  * `path` - The request path to use for health check.
+  * `status` - The response code of health check request.
+  * `port` - The port number to use for health check.
+* `weighted` - The flag of enabling to weighted balancing.
+* `description` - The description of GSLB.
+* `tags` - The tags of GSLB.
+* `servers` - The target servers of GSLB.
+  * `ipaddress` - The IPAddress of target server.
+  * `enabled` - The flag of enabling to target server.
+  * `weight` - The weight of target server.
+* `FQDN` - The FQDN of GSLB.

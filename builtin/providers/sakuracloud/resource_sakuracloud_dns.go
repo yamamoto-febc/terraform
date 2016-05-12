@@ -82,7 +82,9 @@ func resourceSakuraCloudDNSCreate(d *schema.ResourceData, meta interface{}) erro
 	client := meta.(*api.Client)
 
 	opts := client.DNS.New(d.Get("zone").(string))
-	opts.Description = d.Get("description").(string)
+	if description, ok := d.GetOk("description"); ok {
+		opts.Description = description.(string)
+	}
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)

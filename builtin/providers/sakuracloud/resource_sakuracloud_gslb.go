@@ -141,7 +141,9 @@ func resourceSakuraCloudGSLBCreate(d *schema.ResourceData, meta interface{}) err
 		opts.Settings.GSLB.Weighted = "False"
 	}
 
-	opts.Description = d.Get("description").(string)
+	if description, ok := d.GetOk("description"); ok {
+		opts.Description = description.(string)
+	}
 	rawTags := d.Get("tags").([]interface{})
 	if rawTags != nil {
 		opts.Tags = expandStringList(rawTags)
